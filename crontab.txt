@@ -1,0 +1,14 @@
+#
+#	crontab.txt - crontab entry for EbookMobile
+#
+#	(c ) Kathryn Lybarger. CC-BY-SA
+#
+#	This entry would cache feed entries at 2am every morning
+#
+#	Modify to add to reflect your own file path and desired cache schedule
+#
+#	Install by running crontab -e and pasting in the appropriate lines
+#
+# min hour mday month wday
+0 2 * * * php FILE_PATH_TO_EBM/gdaily.php
+

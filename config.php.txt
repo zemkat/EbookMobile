@@ -1,0 +1,17 @@
+<?php
+#
+#	config.php - change these values for your own system
+#
+#	(c) Kathryn Lybarger. CC-BY-SA
+#
+
+#   Web directory where EBM is installed
+$path_to_EBM = "http://www.zemkat.org/CTS/EBM/";
+
+#   Persistent URL for records in your OPAC (UK given as example)
+#   Include "EBM_BIB_ID" for pattern replacement
+$purl_pattern = "http://infokat.uky.edu/vwebv/holdingsInfo?bibId=EBM_BIB_ID";
+
+#   Contact email to include in feed code (please change)
+$feed_email = "me@example.edu";
+

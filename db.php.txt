@@ -1,0 +1,24 @@
+<?php
+#
+#   db.php - shortcuts for mysql
+#
+#   (c) 2013 Kathryn Lybarger. CC-BY-SA
+#
+
+$host = "localhost";
+$username = "zemebm_user";
+$password = "PASTE PASSWORD HERE";
+$database = "ZemEBM";
+$mysqli = new mysqli( $host, $username, $password, $database ); 
+
+function do_query( $query ) {
+	global $mysqli;
+	$result = $mysqli->query( $query );
+	if(!$result) { trigger_error( "mysqli->query($query)" ); trigger_error(" returned {$mysqli->error}\n"); }
+	return $result;
+}
+
+function sqlescape( $string ) {
+	global $mysqli;
+	return "'" . $mysqli->escape_string($string) . "'";
+}

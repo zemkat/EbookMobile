@@ -1,0 +1,109 @@
+#
+#	gschema.mysql - database schema for EbookMobile
+#
+#	(c) Kathryn Lybarger. CC-BY-SA
+#
+#	Load or paste this code into mysql to set it up for EbookMobile
+#	BUT FIRST:
+#
+#	- Create a good random password with a command like:
+#	  dd if=/dev/urandom bs=20 count=1 | sha1sum
+#
+#	- Modify BDB query to add your read-only credentials
+#
+#	- Example queries are provided to demonstrate direct creation of a feed
+#
+
+CREATE DATABASE ZemEBM;
+GRANT ALL ON ZemEBM.* TO 'zemebm_user'@'localhost' IDENTIFIED BY 'PASTE PASSWORD HERE';
+
+#
+#	Allow multiple databases from one installation
+#
+
+CREATE TABLE BDBs (	# bibliographic databases
+        bdb_id			int(4) unsigned primary key auto_increment,
+		host			varchar(255),
+		port			int(4) unsigned,
+		ro_login		varchar(255),
+		ro_pw			varchar(255),
+		last_queried	date
+);
+INSERT INTO BDBs SET
+	host='XXXX-voy.hosted.exlibrisgroup.com',
+	port='1521',
+	ro_login='ro_XXXX',
+	ro_pw='XXXX';
+
+#---------------------------------------------------------------------
+
+CREATE TABLE gfeeds ( # general feed
+        gfeed_id 			int unsigned primary key auto_increment,
+		lifetime_days		int unsigned,
+		title				varchar(255)
+);
+INSERT INTO gfeeds SET
+	gfeed_id='1', lifetime_days='30',
+	title='Original Cataloging from KUK';
+
+#---------------------------------------------------------------------
+
+CREATE TABLE gfeed_query (
+	query_id		int unsigned, # which query?
+	gfeed_id		int unsigned, # which feed?
+	embargo_days	int unsigned, # how new is too new?
+	new_trigger		varchar(255), # 'create' or 'modify' makes new?
+	lifetime_days	int unsigned, # how many days to stay on list?
+	last_run		datetime	  # last update
+);
+
+INSERT INTO gfeed_query SET
+	query_id = '1', gfeed_id = '1', embargo_days = '0',
+	new_trigger = 'create', lifetime_days = '30';
+
+#---------------------------------------------------------------------
+
+CREATE TABLE queries (
+        query_id			int unsigned primary key auto_increment,
+		query_text			text
+);
+
+# Queries should return at least:
+#	BIB_ID
+#	LASTMODIFIED
+#	TITLE
+#	TITLE_BRIEF
+#	ISBN
+#
+#	For a feed triggered by record modification, maybe start with:
+#
+#	SELECT BIB_TEXT.BIB_ID, BIB_TEXT.TITLE, BIB_TEXT.TITLE_BRIEF, BIB_TEXT.ISBN, TO_CHAR(MAX(BIB_HISTORY.ACTION_DATE),\'YYYY-MM-DD HH24:MI:SS\') AS LASTMODIFIED# FROM (BIB_TEXT INNER JOIN BIB_HISTORY ON BIB_TEXT.BIB_ID = BIB_HISTORY.BIB_ID) INNER JOIN BIB_MASTER ON BIB_MASTER.BIB_ID = BIB_TEXT.BIB_ID
+# WHERE (BIB_MASTER.SUPPRESS_IN_OPAC=\'N\' AND ...)
+# GROUP BY BIB_TEXT.BIB_ID,BIB_TEXT.TITLE_BRIEF,BIB_TEXT.TITLE,BIB_TEXT.ISBN HAVING TO_CHAR(MAX(BIB_HISTORY.ACTION_DATE),\'YYYY-MM-DD HH24:MI:SS\') BETWEEN EBM_FIRST_DATE and EBM_LAST_DATE';
+#
+#	For a feed triggered by record addition, maybe start with:
+#
+#	SELECT BIB_HISTORY.BIB_ID, TO_CHAR(BIB_HISTORY.ACTION_DATE,'YYYY-MM-DD HH24:MI:SS') AS LAST_MODIFIED, BIB_HISTORY.ACTION_DATE, BIB_TEXT.TITLE, BIB_TEXT.TITLE_BRIEF, BIB_TEXT.ISBN
+#	FROM (BIB_HISTORY INNER JOIN BIB_TEXT ON BIB_HISTORY.BIB_ID = BIB_TEXT.BIB_ID) INNER JOIN BIB_MASTER ON BIB_TEXT.BIB_ID = BIB_MASTER.BIB_ID
+# WHERE BIB_MASTER.SUPPRESS_IN_OPAC=\'N\' AND BIB_HISTORY.ACTION_TYPE_ID = '1' AND TO_CHAR(ACTION_DATE,'YYYY-MM-DD') BETWEEN EBM_FIRST_DATE AND EBM_LAST_DATE AND ...
+#
+
+# Original Cataloging
+#
+#	To use this query, replace KUK with your symbol
+#
+INSERT INTO queries SET
+	query_id='1', query_text = "SELECT BIB_HISTORY.BIB_ID, TO_CHAR(BIB_HISTORY.ACTION_DATE,'YYYY-MM-DD HH24:MI:SS') AS LASTMODIFIED, BIB_HISTORY.ACTION_DATE, BIB_TEXT.TITLE, BIB_TEXT.TITLE_BRIEF, BIB_TEXT.ISBN FROM (BIB_HISTORY INNER JOIN BIB_TEXT ON BIB_HISTORY.BIB_ID = BIB_TEXT.BIB_ID WHERE ACTION_TYPE_ID = '1' AND TO_CHAR(ACTION_DATE,'YYYY-MM-DD') BETWEEN EBM_FIRST_DATE AND EBM_LAST_DATE AND UKDB.getbibsubfield(BIB_HISTORY.BIB_ID, '040', 'c') = 'KUK'";
+
+
+#---------------------------------------------------------------------
+
+CREATE TABLE gbooks (
+	query_id		int unsigned,
+	bib_id			int unsigned,
+	title			varchar(255),
+	title_brief		varchar(255),
+	isbn			varchar(255),	# for cover service
+	modify_date		datetime,
+	primary key ( query_id, bib_id )
+);
